@@ -52,7 +52,7 @@ def work_orders(*_):
 @mutation.field("work_order_by_id")
 def work_order_by_id(_, info, work_order_id):
     try:
-        work_order = WorkOrder.query.get(work_order_id)
+        work_order = db.session.get(WorkOrder,work_order_id)
         payload = work_order.to_json()
     except AttributeError:
         payload = {
@@ -153,7 +153,7 @@ def get_all_work_orders():
 @app.route("/work_order/<string:work_order_id>", methods=["POST"])
 def get_work_order_by_id(work_order_id):
     try:
-        work_order = WorkOrder.query.get(work_order_id)
+        work_order = db.session.get(WorkOrder, work_order_id)
         payload = work_order.to_json()
     except AttributeError:
         payload = {
@@ -173,7 +173,7 @@ def create_work_order():
         return {"success": False,
                 "errors": "Work Order Type must be 'install' "
                           "or 'service call'"}
-    if not Customer.query.get(customer_id):
+    if not db.session.get(Customer, customer_id):
         return {"success": False,
                 "errors": f"Customer id {customer_id} not found."}
     try:
@@ -195,8 +195,7 @@ def get_all_customers():
 @app.route("/customer/<string:customer_id>", methods=["POST"])
 def get_customer_by_id(customer_id):
     try:
-        # customer = Customer.query.get(customer_id)
-        customer = Customer.query.get(customer_id)
+        customer = db.session.get(Customer, customer_id)
         payload = customer.to_json()
     except AttributeError:
         payload = {
