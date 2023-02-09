@@ -65,8 +65,9 @@ def work_order_by_id(_, info, work_order_id):
 @mutation.field("add_work_order")
 def add_work_order(_, info, work_order_type, schedule, customer_id):
     if work_order_type not in set(item.value for item in WorkOrderType):
-        raise Exception("Error: Work Order Type must be 'install' "
-                        "or 'service call'")
+        raise Exception({"success": False,
+                         "errors": "Work Order Type must be 'install' "
+                                   "or 'service call'"})
 
     work_order = WorkOrder(work_order_type=WorkOrderType(work_order_type),
                            schedule=schedule, customer_id=customer_id)
@@ -75,9 +76,12 @@ def add_work_order(_, info, work_order_type, schedule, customer_id):
 
 
 schema = make_executable_schema(type_defs, [query, mutation])
+
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
@@ -127,11 +131,6 @@ class WorkOrder(db.Model):
         db.session.commit()
 
 
-@app.route("/", methods=["GET"])
-def hello_page():
-    pass
-
-
 @app.route("/graphql", methods=["GET"])
 def graphql_playground():
     return PLAYGROUND_HTML
@@ -171,15 +170,19 @@ def create_work_order():
     schedule = request.form.get('schedule')
     customer_id = request.form.get('customer_id')
     if work_order_type not in set(item.value for item in WorkOrderType):
-        return "Error: Work Order Type must be 'install' or 'service call'"
+        return {"success": False,
+                "errors": "Work Order Type must be 'install' "
+                          "or 'service call'"}
     if not Customer.query.get(customer_id):
-        return f"Error: Customer id {customer_id} not found."
+        return {"success": False,
+                "errors": f"Customer id {customer_id} not found."}
     try:
         work_order = WorkOrder(work_order_type=WorkOrderType(work_order_type),
-                               schedule=schedule,customer_id=customer_id)
+                               schedule=schedule, customer_id=customer_id)
         work_order.save()
     except Exception as e:
-        return f"Missing argument: {e}"
+        return {"success": False,
+                "errors": f"Missing argument: {e}"}
 
     return work_order.to_json()
 
@@ -192,12 +195,13 @@ def get_all_customers():
 @app.route("/customer/<string:customer_id>", methods=["POST"])
 def get_customer_by_id(customer_id):
     try:
-        customer = WorkOrder.query.get(id)
+        # customer = Customer.query.get(customer_id)
+        customer = Customer.query.get(customer_id)
         payload = customer.to_json()
     except AttributeError:
         payload = {
             "success": False,
-            "errors": [f"Work order matching id {customer_id} not found."]
+            "errors": [f"Customer matching id {customer_id} not found."]
         }
 
     return payload
@@ -214,9 +218,11 @@ def create_customer():
     email_regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
     romanian_phone_number_regex = r'\+4\d{10}|\d{10}'
     if not re.match(email_regex, email_address):
-        return {"error": "Email address seems invalid"}
+        return {"success": False,
+                "errors": "Email address seems invalid"}
     if not re.match(romanian_phone_number_regex, phone_number):
-        return {"error": "Romanian phone number seems invalid"}
+        return {"success": False,
+                "errors": "Romanian phone number seems invalid"}
 
     try:
         customer = Customer(first_name=first_name, last_name=last_name,
@@ -224,7 +230,8 @@ def create_customer():
                             phone_number=phone_number)
         customer.save()
     except Exception as e:
-        return {"Missing argument": f"{e}"}
+        return {"success": False,
+                "errors": f"Missing argument: {e}"}
 
     return customer.to_json()
 
