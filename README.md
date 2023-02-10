@@ -58,7 +58,7 @@ schedule:String(the date to execute the work order),customer_id:Int(an existing
 customer id)
 
 
-If success responds with the newly created customer in json.
+If success responds with the newly created work order in json.
 
 ### Get all work orders
 endpoint: /work_orders
